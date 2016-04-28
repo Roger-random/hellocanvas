@@ -1,3 +1,67 @@
+function CircularAnimation(startIndex, length, frameRate, initialStart, restart, blockerCallback, updatedCallback) {
+	// Starting point of the animation frames
+	var startIndex = startIndex;
+
+	// Number of frames to advance startIndex
+	var length = length;
+
+	// Amount of time, in milliseconds, between advancing frames.
+	var frameRate = frameRate;
+
+	// Amount of time, in milliseconds, before starting the first frame.
+	var restart = restart;
+
+	// Callback method to check if advanceDrawFrame should hold off.
+	var blockerCallback = blockerCallback;
+
+	// Callback method to notify that a new frame is available via currentDrawFrame
+	var updatedCallback = updatedCallback;
+
+	// Current frame index. -1 when inactive.
+	var currentFrame = -1;
+
+	// Called by the timer to calculate the next frame.
+	this.advanceDrawFrame = function() {
+		// If we are currently inactive, check if we're blocked from starting.
+		if (currentFrame == -1) {
+			if (blockerCallback()) {
+				// Set a timer to check back after the equivalent of a full cycle.
+				setTimeout(this.advanceDrawFrame.bind(this), (frameRate*length) + restart);
+				return;
+			}
+		}
+
+		// Advance to next frame
+		currentFrame++;
+
+		if (currentFrame < length) {
+			// Set timer for the following frame.
+			setTimeout(this.advanceDrawFrame.bind(this), frameRate);
+		} else {
+			// We're at the end of the sequence - reset and restart.
+			currentFrame = -1;
+			setTimeout(this.advanceDrawFrame.bind(this), restart);
+		}
+
+		// Notify of this update
+		updatedCallback();
+	}
+
+	// Called by a render function to see which frame to draw. Returns -1 if the
+	// animation is currently inactive.
+	this.currentDrawFrame = function() {
+		if (currentFrame == -1) {
+			return -1;
+		} else {
+			return startIndex + currentFrame;
+		}
+	}
+
+	// Using the initialStart parameter, sets a timer to kick off advancing frames.
+	setTimeout(this.advanceDrawFrame.bind(this), initialStart);
+};
+
+
 // Given a canvas, renders the ZFP communication sprites into it.
 
 // Possible future configuration options: 
@@ -7,16 +71,104 @@
 
 function ZoqFotPikComm(targetCanvas) {
 	var targetCanvas = targetCanvas;
-	var targetContext;
+
+	var offscreenCanvas;
+	var canvasValid = true;
 
 	var frames = new Array();
-
+	var animations = new Array();
 	var state = 0;
 
-	var draw = function() {
-		targetContext.drawImage(frames[0].img, 0, 0);
+	// Checked by the Zoq gulp ambient animation to see if it should start
+	// another loop. Will return true when Zoq is talking and can't gulp.
+	var blockZoqGulp = function() {
+		return false;
+	}
+
+	// Checked by the Fot blink ambient animation to see if it should
+	// start a blink. Will return true if Fot is looking at either Zoq
+	// or Pik and shouldn't blink.
+	var blockFotBlink = function() {
+		return false;
+	}
+
+	// Checked by the Pik smoke ambient animation to see if it should start
+	// another puff. Will return true if Pik is talking and shouldn't smoke
+	var blockPikSmoke = function() {
+		return false;
+	}
+
+	// Called by anybody who thinks we need to redraw.
+	var invalidate = function() {
+		if (canvasValid) {
+			canvasValid = false;
+			window.requestAnimationFrame(drawFrame);
+		}
+	}
+
+	// We don't care who is in charge of the width of the target canvas. We
+	// just care to adjust the height in order to maintain aspect ratio.
+	var resizeTarget = function() {
+		var aspectRatio = offscreenCanvas.getAttribute("width") / offscreenCanvas.getAttribute("height");
+
+		targetCanvas.height = targetCanvas.width / aspectRatio;
+
+		invalidate();
+	}
+
+	// Draw the background then any applicable sprites on to the offscreen
+	// canvas in 1:1 pixel mode. Then transfer the result all together to the 
+	// target canvas, scaling as necessary. We need to composit the sprites
+	// while in 1:1 pixel mode before scaling because otherwise we'll get
+	// visible seams introduced by the scaling sampling algorithm.
+	var drawFrame = function() {
+		offscreenCanvasContext = offscreenCanvas.getContext('2d');
+		offscreenCanvasContext.drawImage(frames[0].img, 0, 0);
+
+		for(var i = 0; i < animations.length; i++) {
+			var frameToDraw = animations[i].currentDrawFrame();
+
+			if (frameToDraw != -1) {
+				var frame = frames[frameToDraw];
+
+				offscreenCanvasContext.drawImage(frame.img, 0-frame.x, 0-frame.y);
+			}
+		}
+
+		var targetCanvasContext = targetCanvas.getContext('2d');
+		targetCanvasContext.drawImage(offscreenCanvas, 0, 0, targetCanvas.width, targetCanvas.height);
+
+		canvasValid = true;
+	}
+
+	// Once the first frame of animations (aka the background) has loaded, we
+	// can start preparing the various animations.
+	var setupAnimation = function() {
+		var backgroundImage = frames[0].img;
+
+		// Offscreen canvas sized to match the background image
+		offscreenCanvas = document.createElement("canvas");
+		offscreenCanvas.setAttribute("width", backgroundImage.width);
+		offscreenCanvas.setAttribute("height", backgroundImage.height);
+
+		var animation;
+
+		//function CircularAnimation(startIndex, length, frameRate, initialStart, restart, blockerCallback, updatedCallback) {
+
+		// Zoq gulp animation
+		animations.push(new CircularAnimation(10, 8, 1000/15, 5000, 10000, blockZoqGulp, invalidate));
+
+		// Fot blink animation
+		//animations.push(new CircularAnimation(1, 4, 1000/24, 10000, 5000, blockZoqGulp, invalidate));
+
+		// Pik smoke animation
+		animations.push(new CircularAnimation(5, 5, 7000/120, 1000, 2000, blockPikSmoke, invalidate));
+
+		resizeTarget();
+		drawFrame();
 	};
 
+	// Once zoqfotpik.ani is loaded, parse the animation frames.
 	var aniLoaded = function(data, textStatus, jqXHR) {
 		// Expect result to be in a text file, one frame per line separated by \n
 		var frameList = data.split("\n");
@@ -39,21 +191,20 @@ function ZoqFotPikComm(targetCanvas) {
 
 				// Once frame zero (background) is loaded, we can put it on screen.
 				if (i == 0) {
-					img.onload = draw;
+					img.onload = setupAnimation;
 				}
 
 				// Parse the X,Y offsets
 				var offsetX = parseInt(frameLine[3]);
 				var offsetY = parseInt(frameLine[4]);
 
+				// Pack the three pieces of data into an object, append to the list of frames.
 				var frame = { "img" : img, "x" : offsetX, "y" : offsetY };
 
-				console.log("Pushing " + frameLine[0] + " (" + offsetX + "," + offsetY + ")");
+				// Right now all the frames come in-order, starting with zero, 
+				// so the frame number matches the array index. If this ever 
+				// changes, we'll do something other than just push.
 				frames.push(frame);
-			}
-			else
-			{
-				console.log("aniLoaded skipping line " + i);
 			}
 		}
 		state++;
@@ -71,8 +222,6 @@ function ZoqFotPikComm(targetCanvas) {
 
 	this.start = function() {
 		if (targetCanvas.getContext) {
-			targetContext = targetCanvas.getContext('2d');
-
 			// Kick off loading the animation frame definitions
 			$.ajax({url:"zoqfotpik.ani", type:"GET", dataType:"text"}).done(aniLoaded).fail(ajaxFail);
 
