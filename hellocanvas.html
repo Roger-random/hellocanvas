@@ -3,26 +3,202 @@
         <meta charset="utf-8"/>
         <title>Hello &lt;Canvas&gt; World</title>
         <script type="text/javascript">
-            function draw() {
-                var canvas = document.getElementById('tutorial');
-                if (canvas.getContext) {
-                    var ctx = canvas.getContext('2d');
-                 
-                    var img = document.getElementById("zoqfotpik-000");
-                    
-                    ctx.drawImage(img, 5, 5);
+
+            var needRedraw = false;
+            var animations = new Array();
+
+            var lastTimestamp;
+
+            function drawAndTransfer(timestamp) {
+                var canvas = document.getElementById('zfpCanvas');
+                var canvasCtx = canvas.getContext('2d');
+                var background = document.getElementById("zoqfotpik-000");
+
+                canvasCtx.drawImage(background, 0, 0);
+
+                for (var i = 0; i < animations.length; i++) {
+                    animations[i].drawFrame(canvasCtx);
+                }
+
+                var enlarged = document.getElementById('enlarged');
+                var enlCtx = enlarged.getContext('2d');
+
+                /*
+                enlCtx.mozImageSmoothingEnabled = false;
+                enlCtx.webkitImageSmoothingEnabled = false;
+                enlCtx.msImageSmoothingEnabled = false;
+                enlCtx.imageSmoothingEnabled = false;
+                */
+                enlCtx.drawImage(canvas, 0, 0, enlarged.width, enlarged.height);
+
+                needRedraw = false;
+                if (lastTimestamp!=undefined) {
+                    console.log("redraw interval " + (timestamp - lastTimestamp));
+                }
+                lastTimestamp = timestamp;
+            }
+
+            function invalidate() {
+                if (!needRedraw) {
+                    needRedraw = true;
+                    window.requestAnimationFrame(drawAndTransfer);
                 }
             }
-    
+
+            function draw() {
+                var canvas = document.getElementById('zfpCanvas');
+                var background = document.getElementById("zoqfotpik-000");
+                canvas.width = background.width;
+                canvas.height = background.height;
+                var bgAspect = canvas.width / canvas.height;
+
+                var enlarged = document.getElementById('enlarged');
+                enlarged.height = enlarged.width / bgAspect;
+
+                var zoqGulpAnimation = new circularAnimation(getZoqGulpData(), invalidate);
+                animations.push(zoqGulpAnimation);
+                setTimeout(zoqGulpAnimation.nextFrame.bind(zoqGulpAnimation), 5000);
+
+                var fotBlinkAnimation = new circularAnimation(getFotBlinkData(), invalidate);
+                animations.push(fotBlinkAnimation);
+                setTimeout(fotBlinkAnimation.nextFrame.bind(fotBlinkAnimation), 10000);
+
+                var pikPuffAnimation = new circularAnimation(getPikPuffData(), invalidate);
+                animations.push(pikPuffAnimation);
+                setTimeout(pikPuffAnimation.nextFrame.bind(pikPuffAnimation), 1800);
+
+                invalidate();
+            };
+
+            var pikPuffData;
+
+            function getPikPuffData() {
+                return {
+                    "frames" : [
+                        { "image" : document.getElementById('zoqfotpik-005'), "x" : 182, "y" : 29 },
+                        { "image" : document.getElementById('zoqfotpik-006'), "x" : 178, "y" : 25 },
+                        { "image" : document.getElementById('zoqfotpik-007'), "x" : 178, "y" : 22 },
+                        { "image" : document.getElementById('zoqfotpik-008'), "x" : 177, "y" : 22 },
+                        { "image" : document.getElementById('zoqfotpik-009'), "x" : 177, "y" : 22 }
+                    ],
+
+                    "frameRate" : 7000/120, // 7/120 of a second between frames.
+                    "restart" : 2000 // Restart after 2 seconds.
+                }
+            };
+
+            // In SC2 code, this is a "Yo-yo" animation. Frames 1 to 4 and back. We're simulating
+            // with a circular animation by explicitly unrolling the yo-yo.
+            function getFotBlinkData() {
+                return {
+                    "frames" : [
+                        { "image" : document.getElementById('zoqfotpik-001'), "x" : 110, "y" : 38 },
+                        { "image" : document.getElementById('zoqfotpik-002'), "x" : 110, "y" : 38 },
+                        { "image" : document.getElementById('zoqfotpik-003'), "x" : 110, "y" : 38 },
+                        { "image" : document.getElementById('zoqfotpik-004'), "x" : 110, "y" : 38 },
+                        { "image" : document.getElementById('zoqfotpik-003'), "x" : 110, "y" : 38 },
+                        { "image" : document.getElementById('zoqfotpik-002'), "x" : 110, "y" : 38 },
+                        { "image" : document.getElementById('zoqfotpik-001'), "x" : 110, "y" : 38 }
+                    ],
+
+                    "frameRate" : 1000/24, // 1/24 of a second between frames
+                    "restart" : 10000 // Restart after 10 seconds.
+                }
+            }
+
+            function getZoqGulpData() {
+                return {
+                    "frames" : [
+                        { "image" : document.getElementById('zoqfotpik-010'), "x" : 57, "y" : 62 },
+                        { "image" : document.getElementById('zoqfotpik-011'), "x" : 40, "y" : 60 },
+                        { "image" : document.getElementById('zoqfotpik-012'), "x" : 41, "y" : 60 },
+                        { "image" : document.getElementById('zoqfotpik-013'), "x" : 45, "y" : 62 },
+                        { "image" : document.getElementById('zoqfotpik-014'), "x" : 48, "y" : 68 },
+                        { "image" : document.getElementById('zoqfotpik-015'), "x" : 53, "y" : 76 },
+                        { "image" : document.getElementById('zoqfotpik-016'), "x" : 54, "y" : 81 },
+                        { "image" : document.getElementById('zoqfotpik-017'), "x" : 56, "y" : 84 }
+                    ],
+                    "frameRate" : 1000/15, // 1/15 of a second between frames.
+                    "restart" : 10000 // Restart after 10 seconds.
+                }
+            };
+
+            function circularAnimation(frameData, dirtyFrame) {
+                var frameData = frameData;
+                var dirtyFrame = dirtyFrame;
+
+                var currentFrameIndex = 0;
+                var currentFrame = null;
+
+                this.nextFrame = function() {
+                    if (currentFrameIndex < frameData.frames.length) {
+                        currentFrame = frameData.frames[currentFrameIndex];
+                        currentFrameIndex++;
+                        setTimeout(this.nextFrame.bind(this), frameData.frameRate);
+                    } else {
+                        currentFrame = null;
+                        currentFrameIndex = 0;
+                        setTimeout(this.nextFrame.bind(this), frameData.restart);
+                    }
+
+                    dirtyFrame();
+                }
+
+                this.drawFrame = function(context) {
+                    if (currentFrame != null) {
+                        context.drawImage(currentFrame.image, currentFrame.x, currentFrame.y);
+                    }
+                }
+            }
+
         </script>
-        <style type="text/css">
-            canvas {border: 1px solid black; }
-        </style>
     </head>
     <body onload="draw()">
-        <canvas id="tutorial" width="300" height="150">
+        <p>zfpCanvas</p>
+        <canvas id="zfpCanvas">
             <h1>CANVAS tag is not supported on your browser. Check for browser support <a href="http://caniuse.com/#search=canvas">here</a>.</h1>
         </canvas>
-        <img id="zoqfotpik-000" src="zfpcomm/zoqfotpik-000.png" />
+        <p>enlarged</p>
+        <canvas id="enlarged" width="1280">
+        </canvas>
+        <p>
+            Background
+            <br/>
+            <img id="zoqfotpik-000" src="zfpcomm/zoqfotpik-000.png" />
+        </p>
+        <p>
+            <ol>
+                <li><img id="zoqfotpik-001" src="zfpcomm/zoqfotpik-001.png" /></li>
+                <li><img id="zoqfotpik-002" src="zfpcomm/zoqfotpik-002.png" /></li>
+                <li><img id="zoqfotpik-003" src="zfpcomm/zoqfotpik-003.png" /></li>
+                <li><img id="zoqfotpik-004" src="zfpcomm/zoqfotpik-004.png" /></li>
+                <li><img id="zoqfotpik-005" src="zfpcomm/zoqfotpik-005.png" /></li>
+                <li><img id="zoqfotpik-006" src="zfpcomm/zoqfotpik-006.png" /></li>
+                <li><img id="zoqfotpik-007" src="zfpcomm/zoqfotpik-007.png" /></li>
+                <li><img id="zoqfotpik-008" src="zfpcomm/zoqfotpik-008.png" /></li>
+                <li><img id="zoqfotpik-009" src="zfpcomm/zoqfotpik-009.png" /></li>
+                <li><img id="zoqfotpik-010" src="zfpcomm/zoqfotpik-010.png" /></li>
+                <li><img id="zoqfotpik-011" src="zfpcomm/zoqfotpik-011.png" /></li>
+                <li><img id="zoqfotpik-012" src="zfpcomm/zoqfotpik-012.png" /></li>
+                <li><img id="zoqfotpik-013" src="zfpcomm/zoqfotpik-013.png" /></li>
+                <li><img id="zoqfotpik-014" src="zfpcomm/zoqfotpik-014.png" /></li>
+                <li><img id="zoqfotpik-015" src="zfpcomm/zoqfotpik-015.png" /></li>
+                <li><img id="zoqfotpik-016" src="zfpcomm/zoqfotpik-016.png" /></li>
+                <li><img id="zoqfotpik-017" src="zfpcomm/zoqfotpik-017.png" /></li>
+                <li><img id="zoqfotpik-018" src="zfpcomm/zoqfotpik-018.png" /></li>
+                <li><img id="zoqfotpik-019" src="zfpcomm/zoqfotpik-019.png" /></li>
+                <li><img id="zoqfotpik-020" src="zfpcomm/zoqfotpik-020.png" /></li>
+                <li><img id="zoqfotpik-021" src="zfpcomm/zoqfotpik-021.png" /></li>
+                <li><img id="zoqfotpik-022" src="zfpcomm/zoqfotpik-022.png" /></li>
+                <li><img id="zoqfotpik-023" src="zfpcomm/zoqfotpik-023.png" /></li>
+                <li><img id="zoqfotpik-024" src="zfpcomm/zoqfotpik-024.png" /></li>
+                <li><img id="zoqfotpik-025" src="zfpcomm/zoqfotpik-025.png" /></li>
+                <li><img id="zoqfotpik-026" src="zfpcomm/zoqfotpik-026.png" /></li>
+                <li><img id="zoqfotpik-027" src="zfpcomm/zoqfotpik-027.png" /></li>
+                <li><img id="zoqfotpik-028" src="zfpcomm/zoqfotpik-028.png" /></li>
+                <li><img id="zoqfotpik-029" src="zfpcomm/zoqfotpik-029.png" /></li>
+                <li><img id="zoqfotpik-030" src="zfpcomm/zoqfotpik-030.png" /></li>
+            </ol>
+        </p>
     </body>
 </html>
