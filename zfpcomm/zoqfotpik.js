@@ -19,6 +19,8 @@ function ZoqFotPikComm(targetCanvas) {
 	var frames = new Array();
 	var animations = new Array();
 
+	var conversations = new Array();
+
 	// Called by anybody who thinks we need to redraw.
 	var invalidate = function() {
 		if (canvasValid) {
@@ -234,9 +236,69 @@ function ZoqFotPikComm(targetCanvas) {
 	};
 
 	var txtLoaded = function(data, textStatus, jqXHR) {
-		console.log("Text file load " + textStatus);
-	};
+		// Regular expression to extract label 
+		// 	WE_ARE0 from "#(WE_ARE0)	zoqfotpik-000.ogg"
+		// ^ = start of the line
+		// # = literal
+		// \\( = open parentese
+		//       \ escape JS string literal meaning for \
+		//       \ escape special RegEx meaning for (
+		//       ( actual literal to use.
+		// ( = start extracting content
+		// . = any single character that's not newline
+		// + = repeat previous thing (.) one or more times.
+		// ) = done extracting content
+		// \\) = close parentese
+		//       \ escape JS string literal meaning for \
+		//       \ escape special RegEx meaning for (
+		//       ) actual literal to use.
+		// \\s = whitespace character
+		var reLabel = new RegExp("^#\\((.+)\\)\\s","m");
 
+		// Regular expression to extract sound file name
+		//	zoqfotpik-001.ogg from "#(WE_ARE0)	zoqfotpik-000.ogg"
+		// \\s = whitespace character
+		// ( = start extracting content
+		// \\b = start of a word boundary
+		// . = any single character that's not newline
+		// + = repeat previous thing (.) one or more times.
+		// \\. = period
+		//       \ escape JS string literal meaning for \
+		//       \ escape special RegEx meaning for (
+		//       . actual literal to use.
+		// . = any single character that's not newline
+		// + = repeat previous thing (.) one or more times.
+		// ) = done extracting content
+		// $ = end of the line
+		var reFilename = new RegExp("\\s(\\b.+\\..+)$", "m");
+
+		var conversation = null;
+		var txtLines = data.split("\n");
+
+		for (var i = 0; i < txtLines.length; i++) {
+			if (txtLines[i].length > 1) {
+				var l = txtLines[i];
+				var label = reLabel.exec(l);
+				var fileName = reFilename.exec(l);
+
+				if( label != null ) {
+					if (conversation != null) {
+						conversations.push(conversation);
+					}
+
+					conversation = { "label" : label[1]};
+
+					if (fileName != null) {
+						conversation["fileName"] = fileName[1];
+					}
+
+					conversation["lines"] = new Array();
+				} else {
+					conversation["lines"].push(l);
+				}
+			}
+		}
+	};
 
 	var ajaxFail = function(jqXHR, textStatus, errorThrown) {
 		console.log("General AJAX Error " + textStatus);
