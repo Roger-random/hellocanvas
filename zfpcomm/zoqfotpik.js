@@ -17,25 +17,6 @@ function ZoqFotPikComm(targetCanvas) {
 	// var lastTimestamp;
 	var state = 0;
 
-	// Checked by the Zoq gulp ambient animation to see if it should start
-	// another loop. Will return true when Zoq is talking and can't gulp.
-	var blockZoqGulp = function() {
-		return false;
-	}
-
-	// Checked by the Fot blink ambient animation to see if it should
-	// start a blink. Will return true if Fot is looking at either Zoq
-	// or Pik and shouldn't blink.
-	var blockFotBlink = function() {
-		return false;
-	}
-
-	// Checked by the Pik smoke ambient animation to see if it should start
-	// another puff. Will return true if Pik is talking and shouldn't smoke
-	var blockPikSmoke = function() {
-		return false;
-	}
-
 	// Called by anybody who thinks we need to redraw.
 	var invalidate = function() {
 		if (canvasValid) {
@@ -84,6 +65,83 @@ function ZoqFotPikComm(targetCanvas) {
         // lastTimestamp = timestamp;
 	}
 
+	var zfpFocus = null;
+
+	var zoqGulpAnimation;
+	var zoqTalkAnimation;
+	var zoqTimeout;
+
+	var zoqAnimationUpdate = function() {
+		if (zoqGulpAnimation.currentDrawFrame() == -1 &&
+			zoqTalkAnimation.currentDrawFrame() == -1) {
+
+			// No animation in progress, and we're about to kick off another
+			// one. Stop any that might be already pending.
+			clearTimeout(zoqTimeout);
+
+			if (zfpFocus=="ZOQ") {
+				zoqTimeout = setTimeout(zoqTalkAnimation.advanceDrawFrame.bind(zoqTalkAnimation), 1000/12);
+			} else {
+				zoqTimeout = setTimeout(zoqGulpAnimation.advanceDrawFrame.bind(zoqGulpAnimation), 10000);
+			}
+		} else {
+			// Animation in progress, we'll be called again when it is done.
+		}
+	};
+
+	var fotBlinkAnimation;
+	var fotLookAnimation;
+	var fotTimeout;
+
+	var fotAnimationUpdate = function() {
+		if (fotBlinkAnimation.currentDrawFrame() == -1 &&
+			fotLookAnimation.currentDrawFrame() == -1) {
+			clearTimeout(fotTimeout);
+			fotTimeout = setTimeout(fotBlinkAnimation.advanceDrawFrame.bind(fotBlinkAnimation), 7500);
+		} 
+
+		if (zfpFocus == "ZOQ" ) {
+			fotLookAnimation.setTargetFrame(0);
+		} else if (zfpFocus == "PIK") {
+			fotLookAnimation.setTargetFrame(4);
+		} else {
+			fotLookAnimation.setTargetFrame(2);
+		}
+	};
+
+	var pikSmokeAnimation;
+	var pikTalkAnimation;
+	var pikTimeout;
+
+	var pikAnimationUpdate = function() {
+		if (pikSmokeAnimation.currentDrawFrame() == -1 &&
+			pikTalkAnimation.currentDrawFrame() == -1) {
+
+			// No animation in progress, and we're about to kick off another
+			// one. Stop any that might be already pending.
+			clearTimeout(pikTimeout);
+
+			if (zfpFocus=="PIK") {
+				pikTimeout = setTimeout(pikTalkAnimation.advanceDrawFrame.bind(pikTalkAnimation), 1000/12);
+			} else {
+				pikTimeout = setTimeout(pikSmokeAnimation.advanceDrawFrame.bind(pikSmokeAnimation), 2000);
+			}
+		} else {
+			// Animation in progress, we'll be called again when it is done.
+		}
+	};
+
+	this.setZfpFocus = function(focusOn) {
+		if (zfpFocus != focusOn)
+		{
+			zfpFocus = focusOn;
+
+			zoqAnimationUpdate();
+			fotAnimationUpdate();
+			pikAnimationUpdate();
+		}
+	};
+
 	// Once the first frame of animations (aka the background) has loaded, we
 	// can start preparing the various animations.
 	var setupAnimation = function() {
@@ -94,18 +152,28 @@ function ZoqFotPikComm(targetCanvas) {
 		offscreenCanvas.setAttribute("width", backgroundImage.width);
 		offscreenCanvas.setAttribute("height", backgroundImage.height);
 
-		var animation;
+		// Create all the animation objects we need.
+		// Timers are set up to start ambient animations.
+		zoqGulpAnimation = new CircularAnimation(10, 8, 1000/15, invalidate, zoqAnimationUpdate);
+		zoqTimeout = setTimeout(zoqGulpAnimation.advanceDrawFrame.bind(zoqGulpAnimation), 5000);
+		animations.push(zoqGulpAnimation);
 
-		//function CircularAnimation(startIndex, length, frameRate, initialStart, restart, blockerCallback, updatedCallback) {
+		zoqTalkAnimation = new CircularAnimation(18, 5, 1000/15, invalidate, zoqAnimationUpdate);
+		animations.push(zoqTalkAnimation);
 
-		// Zoq gulp animation
-		animations.push(new CircularAnimation(10, 8, 1000/15, 5000, 10000, blockZoqGulp, invalidate));
+		fotBlinkAnimation = new YoyoAnimation(1, 4, 1000/24, invalidate, fotAnimationUpdate);
+		fotTimeout = setTimeout(fotBlinkAnimation.advanceDrawFrame.bind(fotBlinkAnimation), 10000); 
+		animations.push(fotBlinkAnimation);
 
-		// Fot blink animation
-		animations.push(new YoyoAnimation(1, 4, 1000/24, 10000, 10000, blockZoqGulp, invalidate));
+		fotLookAnimation = new TargetIndexAnimation([25,24,23,27,28], 2, 1000/30, invalidate, fotAnimationUpdate);
+		animations.push(fotLookAnimation);
 
-		// Pik smoke animation
-		animations.push(new CircularAnimation(5, 5, 7000/120, 1000, 2000, blockPikSmoke, invalidate));
+		pikSmokeAnimation = new CircularAnimation(5, 5, 7000/120, invalidate, pikAnimationUpdate);
+		pikTimeout = setTimeout(pikSmokeAnimation.advanceDrawFrame.bind(pikSmokeAnimation), 1000);
+		animations.push(pikSmokeAnimation);
+
+		pikTalkAnimation = new CircularAnimation(29, 2, 1000/15, invalidate, pikAnimationUpdate);
+		animations.push(pikTalkAnimation);
 
 		resizeTarget();
 		drawFrame();

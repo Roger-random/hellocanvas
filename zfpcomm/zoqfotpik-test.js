@@ -1,6 +1,20 @@
+var zfpComm;
+
 function zfpActivate() {
 	var target = document.getElementById('commTarget');
-	var zfpComm = new ZoqFotPikComm(target);
+	zfpComm = new ZoqFotPikComm(target);
 
 	zfpComm.start();
+}
+
+function zoqSpeak() {
+	zfpComm.setZfpFocus("ZOQ");
+}
+
+function noSpeak() {
+	zfpComm.setZfpFocus(null);
+}
+
+function pikSpeak() {
+	zfpComm.setZfpFocus("PIK");
 }

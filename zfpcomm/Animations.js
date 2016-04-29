@@ -1,6 +1,6 @@
 // There should be a base class for all the commonalities... but I haven't figured out how to make that work in JS yet.
 
-function CircularAnimation(startIndex, length, frameRate, initialStart, restart, blockerCallback, updatedCallback) {
+function CircularAnimation(startIndex, length, frameRate, updatedCallback, completedCallback) {
 	// Starting point of the animation frames
 	var startIndex = startIndex;
 
@@ -10,29 +10,17 @@ function CircularAnimation(startIndex, length, frameRate, initialStart, restart,
 	// Amount of time, in milliseconds, between advancing frames.
 	var frameRate = frameRate;
 
-	// Amount of time, in milliseconds, before starting the first frame.
-	var restart = restart;
-
-	// Callback method to check if advanceDrawFrame should hold off.
-	var blockerCallback = blockerCallback;
-
 	// Callback method to notify that a new frame is available via currentDrawFrame
 	var updatedCallback = updatedCallback;
+
+	// Callback method to notify that a new frame is available via currentDrawFrame
+	var completedCallback = completedCallback;
 
 	// Current frame index. -1 when inactive.
 	var currentFrame = -1;
 
 	// Called by the timer to calculate the next frame.
 	this.advanceDrawFrame = function() {
-		// If we are currently inactive, check if we're blocked from starting.
-		if (currentFrame == -1) {
-			if (blockerCallback()) {
-				// Set a timer to check back after the equivalent of a full cycle.
-				setTimeout(this.advanceDrawFrame.bind(this), (frameRate*length) + restart);
-				return;
-			}
-		}
-
 		// Advance to next frame
 		currentFrame++;
 
@@ -40,9 +28,10 @@ function CircularAnimation(startIndex, length, frameRate, initialStart, restart,
 			// Set timer for the following frame.
 			setTimeout(this.advanceDrawFrame.bind(this), frameRate);
 		} else {
-			// We're at the end of the sequence - reset and restart.
+			// We're at the end of the sequence - reset.
 			currentFrame = -1;
-			setTimeout(this.advanceDrawFrame.bind(this), restart);
+
+			completedCallback();
 		}
 
 		// Notify of this update
@@ -58,13 +47,10 @@ function CircularAnimation(startIndex, length, frameRate, initialStart, restart,
 			return startIndex + currentFrame;
 		}
 	}
-
-	// Using the initialStart parameter, sets a timer to kick off advancing frames.
-	setTimeout(this.advanceDrawFrame.bind(this), initialStart);
 };
 
 
-function YoyoAnimation(startIndex, length, frameRate, initialStart, restart, blockerCallback, updatedCallback) {
+function YoyoAnimation(startIndex, length, frameRate, updatedCallback, completedCallback) {
 	// Starting point of the animation frames
 	var startIndex = startIndex;
 
@@ -74,14 +60,11 @@ function YoyoAnimation(startIndex, length, frameRate, initialStart, restart, blo
 	// Amount of time, in milliseconds, between advancing frames.
 	var frameRate = frameRate;
 
-	// Amount of time, in milliseconds, before starting the first frame.
-	var restart = restart;
-
-	// Callback method to check if advanceDrawFrame should hold off.
-	var blockerCallback = blockerCallback;
-
 	// Callback method to notify that a new frame is available via currentDrawFrame
 	var updatedCallback = updatedCallback;
+
+	// Callback method to notify that a new frame is available via currentDrawFrame
+	var completedCallback = completedCallback;
 
 	// Current frame index. -1 when inactive.
 	var currentFrame = -1;
@@ -91,15 +74,6 @@ function YoyoAnimation(startIndex, length, frameRate, initialStart, restart, blo
 
 	// Called by the timer to calculate the next frame.
 	this.advanceDrawFrame = function() {
-		// If we are currently inactive, check if we're blocked from starting.
-		if (currentFrame == -1) {
-			if (blockerCallback()) {
-				// Set a timer to check back after the equivalent of a full cycle.
-				setTimeout(this.advanceDrawFrame.bind(this), (frameRate*length) + restart);
-				return;
-			}
-		}
-
 		// Advance to next frame
 		currentFrame += yoyoDirection;
 
@@ -108,8 +82,8 @@ function YoyoAnimation(startIndex, length, frameRate, initialStart, restart, blo
 			// We're at the end of the sequence - reset and restart.
 			currentFrame = -1;
 			yoyoDirection = +1;
-			setTimeout(this.advanceDrawFrame.bind(this), restart);
-
+			
+			completedCallback();
 		} else if (currentFrame >= length) {
 			// Oops - we passed the end point. Should have gone backwards instead.
 			currentFrame = length-2; 
@@ -134,7 +108,66 @@ function YoyoAnimation(startIndex, length, frameRate, initialStart, restart, blo
 			return startIndex + currentFrame;
 		}
 	}
-
-	// Using the initialStart parameter, sets a timer to kick off advancing frames.
-	setTimeout(this.advanceDrawFrame.bind(this), initialStart);
 };
+
+function TargetIndexAnimation(frameArray, neutralIndex, frameRate, updatedCallback, completedCallback) {
+	var frameArray = frameArray;
+	var neutralIndex = neutralIndex;
+	var frameRate = frameRate;
+
+	var updatedCallback = updatedCallback;
+	var completedCallback = completedCallback;
+
+	var currentFrame = neutralIndex;
+
+	var targetFrame = neutralIndex;
+
+	var nextFrameTimeout = null;
+
+	this.advanceDrawFrame = function() {
+		var scheduleNextFrame = false;
+		nextFrameTimeout = null;
+
+		if (currentFrame == neutralIndex &&
+			currentFrame == targetFrame) {
+
+			updatedCallback();
+			completedCallback();
+		} else if (currentFrame > targetFrame) {
+			currentFrame--;
+
+			scheduleNextFrame = true;
+			updatedCallback();
+		} else if (currentFrame < targetFrame) {
+			currentFrame++;
+
+			scheduleNextFrame = true;
+			updatedCallback();
+		} else {
+			// target frame equals current frame but is not neutral frame 
+			// Hold position, check back later.
+			scheduleNextFrame = true;
+		}
+
+		if (scheduleNextFrame) {
+			nextFrameTimeout = setTimeout(this.advanceDrawFrame.bind(this), frameRate);
+		}
+	}
+
+	this.setTargetFrame = function(newTarget) {
+		if (targetFrame != newTarget) {
+			targetFrame = newTarget;
+			if (nextFrameTimeout==null) {
+				nextFrameTimeout = setTimeout(this.advanceDrawFrame.bind(this), frameRate);
+			}			
+		}
+	}
+
+	this.currentDrawFrame = function() {
+		if (currentFrame == neutralIndex) {
+			return -1;
+		} else {
+			return frameArray[currentFrame];
+		}
+	}
+}
