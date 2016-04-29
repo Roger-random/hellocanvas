@@ -1,4 +1,9 @@
-// There should be a base class for all the commonalities... but I haven't figured out how to make that work in JS yet.
+// Manages timer and advancing a index value through the given range at the given speed.
+// * startIndex = Starting point of index.
+// * length = Size of value range. Maximum index value is startIndex+length-1
+// * frameRate = time between frames, in milliseconds.
+// * updatedCallback = function to call after every index value change.
+// * completedCallback = function to call upon complete traversal of value range.
 
 function CircularAnimation(startIndex, length, frameRate, updatedCallback, completedCallback) {
 	// Starting point of the animation frames
@@ -19,9 +24,8 @@ function CircularAnimation(startIndex, length, frameRate, updatedCallback, compl
 	// Current frame index. -1 when inactive.
 	var currentFrame = -1;
 
-	// Called by the timer to calculate the next frame.
+	// Called by the owner or timer to calculate the next frame.
 	this.advanceDrawFrame = function() {
-		// Advance to next frame
 		currentFrame++;
 
 		if (currentFrame < length) {
@@ -34,7 +38,6 @@ function CircularAnimation(startIndex, length, frameRate, updatedCallback, compl
 			completedCallback();
 		}
 
-		// Notify of this update
 		updatedCallback();
 	}
 
@@ -49,6 +52,14 @@ function CircularAnimation(startIndex, length, frameRate, updatedCallback, compl
 	}
 };
 
+// Manages timer and advancing a index value through the given range then 
+// "yo-yo" back to the starting index value. Index advances at the given speed.
+// * startIndex = Starting point of index. Will go up to startIndex+length-1 
+//   then back to startIndex.
+// * length = Size of value range. Maximum index value is startIndex+length-1
+// * frameRate = time between frames, in milliseconds.
+// * updatedCallback = function to call after every index value change.
+// * completedCallback = function to call upon complete traversal of value range.
 
 function YoyoAnimation(startIndex, length, frameRate, updatedCallback, completedCallback) {
 	// Starting point of the animation frames
@@ -72,9 +83,8 @@ function YoyoAnimation(startIndex, length, frameRate, updatedCallback, completed
 	// Yo-yo direction. +1 for forward, -1 for backward.
 	var yoyoDirection = +1;
 
-	// Called by the timer to calculate the next frame.
+	// Called by the owner or timer to calculate the next frame.
 	this.advanceDrawFrame = function() {
-		// Advance to next frame
 		currentFrame += yoyoDirection;
 
 		if (currentFrame <= -1 )
@@ -90,12 +100,11 @@ function YoyoAnimation(startIndex, length, frameRate, updatedCallback, completed
 			yoyoDirection = -1;
 			setTimeout(this.advanceDrawFrame.bind(this), frameRate);
 		} else {
-			// Forward or backward - we're within range. 
+			// Forward or backward - doesn't matter, we're within range. 
 			// Set timer for the following frame.
 			setTimeout(this.advanceDrawFrame.bind(this), frameRate);
 		}
 
-		// Notify of this update
 		updatedCallback();
 	}
 
@@ -110,6 +119,17 @@ function YoyoAnimation(startIndex, length, frameRate, updatedCallback, completed
 	}
 };
 
+// Manages timer and advancing a index value through the given array of values
+// heading towards a given target index at the given speed.
+// * frameArray = array of integers to return as frame indices.
+// * neutralIndex = index into frameArray representing the frame that is most
+//   similar (ideally identical) to not drawing a frame at all. When animation
+//   reaches this frame it is considered complete and the associated sprite
+//   does not need to be rendered.
+// * frameRate = time between frames, in milliseconds.
+// * updatedCallback = function to call after every index value change.
+// * completedCallback = function to call upon complete traversal of value range.
+
 function TargetIndexAnimation(frameArray, neutralIndex, frameRate, updatedCallback, completedCallback) {
 	var frameArray = frameArray;
 	var neutralIndex = neutralIndex;
@@ -119,11 +139,12 @@ function TargetIndexAnimation(frameArray, neutralIndex, frameRate, updatedCallba
 	var completedCallback = completedCallback;
 
 	var currentFrame = neutralIndex;
-
 	var targetFrame = neutralIndex;
 
+	// Used to track if we already have a timer ticking to advance frames.
 	var nextFrameTimeout = null;
 
+	// Called by the owner or timer to calculate the next frame.
 	this.advanceDrawFrame = function() {
 		var scheduleNextFrame = false;
 		nextFrameTimeout = null;
@@ -131,6 +152,8 @@ function TargetIndexAnimation(frameArray, neutralIndex, frameRate, updatedCallba
 		if (currentFrame == neutralIndex &&
 			currentFrame == targetFrame) {
 
+			// Reached neutral frame as the intended target. Sequence is
+			// considred complete at this point.
 			updatedCallback();
 			completedCallback();
 		} else if (currentFrame > targetFrame) {
@@ -144,7 +167,7 @@ function TargetIndexAnimation(frameArray, neutralIndex, frameRate, updatedCallba
 			scheduleNextFrame = true;
 			updatedCallback();
 		} else {
-			// target frame equals current frame but is not neutral frame 
+			// target frame equals current frame, but is not neutral frame 
 			// Hold position, check back later.
 			scheduleNextFrame = true;
 		}
@@ -154,6 +177,9 @@ function TargetIndexAnimation(frameArray, neutralIndex, frameRate, updatedCallba
 		}
 	}
 
+	// Called by the owner to update the target. If the target has changed, 
+	// and there isn't already a timer in place for the next frame, 
+	// schedule one.
 	this.setTargetFrame = function(newTarget) {
 		if (targetFrame != newTarget) {
 			targetFrame = newTarget;
@@ -163,6 +189,8 @@ function TargetIndexAnimation(frameArray, neutralIndex, frameRate, updatedCallba
 		}
 	}
 
+	// The current frame index. Neutral frame is considered unnecessary to
+	// repaint so returns -1.
 	this.currentDrawFrame = function() {
 		if (currentFrame == neutralIndex) {
 			return -1;

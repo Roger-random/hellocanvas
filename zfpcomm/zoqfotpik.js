@@ -6,6 +6,11 @@
 // * Different definition of how *.ani frames are used.
 
 function ZoqFotPikComm(targetCanvas) {
+
+	// Constants for use with setTarget
+	const FOCUS_ZOQ = "ZOQ";
+	const FOCUS_PIK = "PIK";
+
 	var targetCanvas = targetCanvas;
 
 	var offscreenCanvas;
@@ -13,9 +18,6 @@ function ZoqFotPikComm(targetCanvas) {
 
 	var frames = new Array();
 	var animations = new Array();
-
-	// var lastTimestamp;
-	var state = 0;
 
 	// Called by anybody who thinks we need to redraw.
 	var invalidate = function() {
@@ -58,14 +60,16 @@ function ZoqFotPikComm(targetCanvas) {
 		targetCanvasContext.drawImage(offscreenCanvas, 0, 0, targetCanvas.width, targetCanvas.height);
 
 		canvasValid = true;
-
-        // if (lastTimestamp!=undefined) {
-        //     console.log("redraw interval " + (timestamp - lastTimestamp));
-        // }
-        // lastTimestamp = timestamp;
 	}
 
+	// Current focus of the ZFP trio, used to determine what graphics to show. 
+	// * FOCUS_ZOQ when Zoq is talking
+	// * FOCUS_PIK when Pik is talking
+	// * null when nobody is talking.
 	var zfpFocus = null;
+
+	/////////////////////////////////////////////////////////////////////////
+	// Zoq animation section
 
 	var zoqGulpAnimation;
 	var zoqTalkAnimation;
@@ -79,7 +83,7 @@ function ZoqFotPikComm(targetCanvas) {
 			// one. Stop any that might be already pending.
 			clearTimeout(zoqTimeout);
 
-			if (zfpFocus=="ZOQ") {
+			if (zfpFocus==FOCUS_ZOQ) {
 				zoqTimeout = setTimeout(zoqTalkAnimation.advanceDrawFrame.bind(zoqTalkAnimation), 1000/12);
 			} else {
 				zoqTimeout = setTimeout(zoqGulpAnimation.advanceDrawFrame.bind(zoqGulpAnimation), 10000);
@@ -89,6 +93,9 @@ function ZoqFotPikComm(targetCanvas) {
 		}
 	};
 
+	/////////////////////////////////////////////////////////////////////////
+	// Fot animation section
+	
 	var fotBlinkAnimation;
 	var fotLookAnimation;
 	var fotTimeout;
@@ -100,15 +107,18 @@ function ZoqFotPikComm(targetCanvas) {
 			fotTimeout = setTimeout(fotBlinkAnimation.advanceDrawFrame.bind(fotBlinkAnimation), 7500);
 		} 
 
-		if (zfpFocus == "ZOQ" ) {
+		if (zfpFocus == FOCUS_ZOQ ) {
 			fotLookAnimation.setTargetFrame(0);
-		} else if (zfpFocus == "PIK") {
+		} else if (zfpFocus == FOCUS_PIK) {
 			fotLookAnimation.setTargetFrame(4);
 		} else {
 			fotLookAnimation.setTargetFrame(2);
 		}
 	};
 
+	/////////////////////////////////////////////////////////////////////////
+	// Pik animation section
+	
 	var pikSmokeAnimation;
 	var pikTalkAnimation;
 	var pikTimeout;
@@ -121,7 +131,7 @@ function ZoqFotPikComm(targetCanvas) {
 			// one. Stop any that might be already pending.
 			clearTimeout(pikTimeout);
 
-			if (zfpFocus=="PIK") {
+			if (zfpFocus==FOCUS_PIK) {
 				pikTimeout = setTimeout(pikTalkAnimation.advanceDrawFrame.bind(pikTalkAnimation), 1000/12);
 			} else {
 				pikTimeout = setTimeout(pikSmokeAnimation.advanceDrawFrame.bind(pikSmokeAnimation), 2000);
@@ -131,7 +141,10 @@ function ZoqFotPikComm(targetCanvas) {
 		}
 	};
 
-	this.setZfpFocus = function(focusOn) {
+	/////////////////////////////////////////////////////////////////////////
+	// Animation setup and management
+
+	var setZfpFocus = function(focusOn) {
 		if (zfpFocus != focusOn)
 		{
 			zfpFocus = focusOn;
@@ -214,16 +227,14 @@ function ZoqFotPikComm(targetCanvas) {
 
 				// Right now all the frames come in-order, starting with zero, 
 				// so the frame number matches the array index. If this ever 
-				// changes, we'll do something other than just push.
+				// changes, we'll have to do something other than just push.
 				frames.push(frame);
 			}
 		}
-		state++;
 	};
 
 	var txtLoaded = function(data, textStatus, jqXHR) {
 		console.log("Text file load " + textStatus);
-		state++;
 	};
 
 
@@ -231,6 +242,12 @@ function ZoqFotPikComm(targetCanvas) {
 		console.log("General AJAX Error " + textStatus);
 	};
 
+	/////////////////////////////////////////////////////////////////////////
+	//
+	//	Public methods
+	//
+
+	// Start the process to load resources
 	this.start = function() {
 		if (targetCanvas.getContext) {
 			// Kick off loading the animation frame definitions
@@ -238,10 +255,21 @@ function ZoqFotPikComm(targetCanvas) {
 
 			// Kick off loading the conversation text
 			$.ajax({url:"zoqfotpik.txt", type:"GET", dataType:"text"}).done(txtLoaded).fail(ajaxFail);
-
-			state++;
 		} else {
 			console.log("Failed to acquire canvas drawing context.");
 		}
+	}
+
+	// Animation control
+	this.zoqTalking = function() {
+		setZfpFocus(FOCUS_ZOQ);
+	}
+
+	this.pikTalking = function() {
+		setZfpFocus(FOCUS_PIK);
+	}
+
+	this.noTalking = function() {
+		setZfpFocus(null);
 	}
 }

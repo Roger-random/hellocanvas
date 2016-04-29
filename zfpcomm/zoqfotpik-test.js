@@ -8,13 +8,13 @@ function zfpActivate() {
 }
 
 function zoqSpeak() {
-	zfpComm.setZfpFocus("ZOQ");
+	zfpComm.zoqTalking();
 }
 
 function noSpeak() {
-	zfpComm.setZfpFocus(null);
+	zfpComm.noTalking();
 }
 
 function pikSpeak() {
-	zfpComm.setZfpFocus("PIK");
+	zfpComm.pikTalking();
 }
