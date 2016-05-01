@@ -1,3 +1,31 @@
 p {
 	font-family : Verdana, sans-serif;
 }
+
+#commParent {
+	position:relative;
+	width:90%;
+	margin-top:2.5%;
+	margin-bottom:2.5%;
+	margin-left:5%;
+	margin-right:5%;
+}
+
+.zfpTalkingText {
+	font-family: 'Teko', Arial, sans-serif;
+	font-size:2.5vw;
+	text-align: center;
+	color: white;
+
+	width : 32.5%;
+	position:absolute;
+	top : 5%;
+}
+
+#pikText {
+	left : 65%;
+}
+
+#zoqText {
+	left : 2.5%;
+}

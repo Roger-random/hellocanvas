@@ -5,6 +5,7 @@ function zfpActivate() {
 	zfpComm = new ZoqFotPikComm(target);
 
 	zfpComm.start();
+	windowResize();
 }
 
 function zoqSpeak() {
@@ -18,3 +19,12 @@ function noSpeak() {
 function pikSpeak() {
 	zfpComm.pikTalking();
 }
+
+function windowResize() {
+	$("#commTarget").attr("width", $("#commParent").innerWidth());
+	zfpComm.invalidateSize();
+}
+
+$(document).ready( function() {
+	$(window).resize(windowResize);
+})

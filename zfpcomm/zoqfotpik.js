@@ -15,6 +15,7 @@ function ZoqFotPikComm(targetCanvas) {
 
 	var offscreenCanvas;
 	var canvasValid = true;
+	var sizeValid = false;
 
 	var frames = new Array();
 	var animations = new Array();
@@ -29,14 +30,12 @@ function ZoqFotPikComm(targetCanvas) {
 		}
 	}
 
-	// We don't care who is in charge of the width of the target canvas. We
-	// just care to adjust the height in order to maintain aspect ratio.
-	var resizeTarget = function() {
-		var aspectRatio = offscreenCanvas.getAttribute("width") / offscreenCanvas.getAttribute("height");
-
-		targetCanvas.height = targetCanvas.width / aspectRatio;
-
-		invalidate();
+	// Invalid size means we need to resize AND redraw everything
+	this.invalidateSize = function() {
+		if (sizeValid) {
+			sizeValid = false;
+			invalidate();
+		}
 	}
 
 	// Draw the background then any applicable sprites on to the offscreen
@@ -58,6 +57,16 @@ function ZoqFotPikComm(targetCanvas) {
 			}
 		}
 
+		if (!sizeValid)
+		{
+			// We don't care who is in charge of the width of the target canvas. We
+			// just care to adjust the height in order to maintain aspect ratio.
+			var aspectRatio = offscreenCanvas.getAttribute("width") / offscreenCanvas.getAttribute("height");
+
+			targetCanvas.height = targetCanvas.width / aspectRatio;
+
+			sizeValid = true;
+		}
 		var targetCanvasContext = targetCanvas.getContext('2d');
 		targetCanvasContext.drawImage(offscreenCanvas, 0, 0, targetCanvas.width, targetCanvas.height);
 
@@ -190,7 +199,6 @@ function ZoqFotPikComm(targetCanvas) {
 		pikTalkAnimation = new CircularAnimation(29, 2, 1000/15, invalidate, pikAnimationUpdate);
 		animations.push(pikTalkAnimation);
 
-		resizeTarget();
 		drawFrame();
 	};
 
@@ -234,6 +242,12 @@ function ZoqFotPikComm(targetCanvas) {
 			}
 		}
 	};
+
+	var placeholderConversation = function() {
+		for (var i = 0; i < conversations.length; i++) {
+
+		}
+	}
 
 	var txtLoaded = function(data, textStatus, jqXHR) {
 		// Regular expression to extract label 
@@ -298,6 +312,8 @@ function ZoqFotPikComm(targetCanvas) {
 				}
 			}
 		}
+
+		placeholderConversation();
 	};
 
 	var ajaxFail = function(jqXHR, textStatus, errorThrown) {

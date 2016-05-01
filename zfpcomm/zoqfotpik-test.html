@@ -3,6 +3,7 @@
         <meta charset="utf-8"/>
         <title>ZoqFotPik comm screen test</title>
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous" />
+        <link href='https://fonts.googleapis.com/css?family=Teko:400' rel='stylesheet' type='text/css'/>
         <link rel="stylesheet" type="text/css" href="zoqfotpik-test.css"/>
         <script src="https://code.jquery.com/jquery-2.2.3.min.js" integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo=" crossorigin="anonymous"></script>
         <script src="animations.js"></script>
@@ -10,13 +11,23 @@
         <script src="zoqfotpik-test.js"></script>
     </head>
     <body onload="zfpActivate()">
-        <canvas id="commTarget" width="1280">
-            <h1>CANVAS tag is not supported on your browser. Check for browser support <a href="http://caniuse.com/#search=canvas">here</a>.</h1>
-        </canvas>
-        <p>
+        <p style="font-size: 2em">
         	<button onclick="zoqSpeak()">Zoq Speak</button>
         	<button onclick="noSpeak()">Silence Blathering Toadies</button>
         	<button onclick="pikSpeak()">Pik Speak</button>
         </p>
+        <p>
+    	<div id="commParent">
+	        <p id="zoqText" class="zfpTalkingText">We are fortunate that you have found us in our time of need.</p>
+	        <p id="pikText" class="zfpTalkingText">In our ancient past, four species evolved intelligence on our homeworld.</p>
+	        <canvas id="commTarget">
+	            <h1>CANVAS tag is not supported on your browser. Check for browser support <a href="http://caniuse.com/#search=canvas">here</a>.</h1>
+	        </canvas>
+        </div>
+        </p>
+        <p>And here's stuff below</p>
+        <div id="conversationList">
+
+        </div>
     </body>
 </html>
