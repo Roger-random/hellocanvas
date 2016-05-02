@@ -30,14 +30,6 @@ function ZoqFotPikComm(targetCanvas) {
 		}
 	}
 
-	// Invalid size means we need to resize AND redraw everything
-	this.invalidateSize = function() {
-		if (sizeValid) {
-			sizeValid = false;
-			invalidate();
-		}
-	}
-
 	// Draw the background then any applicable sprites on to the offscreen
 	// canvas in 1:1 pixel mode. Then transfer the result all together to the 
 	// target canvas, scaling as necessary. We need to composit the sprites
@@ -243,9 +235,83 @@ function ZoqFotPikComm(targetCanvas) {
 		}
 	};
 
-	var placeholderConversation = function() {
-		for (var i = 0; i < conversations.length; i++) {
+	var currentConvLabel = null;
+	var currentConvIndex = 0;
+	var currentLineIndex = 0;
+	var currentFocus = FOCUS_ZOQ;
 
+	var placeholderConversation = function() {
+		var conv;
+		var currentResponse = null;
+
+		for( var i = 0; i < conversations.length; i++ ) {
+			conv = conversations[i];
+
+			if (conv.label.startsWith(currentResponse)) {
+				continue;
+			}
+
+			if (conv.label.charAt(conv.label.length-1) === '0' ) {
+				currentResponse = conv.label.substr(0, conv.label.length-1);
+
+				var btn = $("<button/>", {
+					text      : currentResponse,
+					"onclick" : "say('"+currentResponse+"')"
+				});
+
+				$("#conversationList").append(btn);
+				
+			}
+		}
+	}
+
+	var nextLine = function() {
+		var newLine = null;
+
+		if (currentConvLabel != null) {
+			conv = conversations[currentConvIndex];
+
+			currentLineIndex++;
+
+			if (currentLineIndex >= conv.lines.length) {
+				// Time to move on to the next item - if we have one.
+				currentLineIndex = 0;
+
+				currentConvIndex++;
+				if (currentConvIndex < conversations.length &&
+					conversations[currentConvIndex].label.startsWith(currentConvLabel)) {
+					// Next item is part of same convesation. Swap focus as per ZFP SOP
+					if (zfpFocus === FOCUS_ZOQ) {
+						setZfpFocus(FOCUS_PIK);
+					} else {
+						setZfpFocus(FOCUS_ZOQ);
+					}
+
+					newLine = conversations[currentConvIndex].lines[currentLineIndex];
+
+				} else {
+					// We're done with this conversation.
+					currentConvLabel = null;
+					currentConvIndex = 0;
+					setZfpFocus(null);
+					$("#zoqText").text("");
+					$("#pikText").text("");
+					$("#conversationList").toggle();
+				}
+
+			} else {
+				var newLine = conv.lines[currentLineIndex];
+			}
+
+			if (newLine != null) {
+				if (zfpFocus === FOCUS_ZOQ) {
+					$("#zoqText").text(newLine);
+					$("#pikText").text("");
+				} else {
+					$("#zoqText").text("");
+					$("#pikText").text(newLine);
+				}
+			}
 		}
 	}
 
@@ -313,6 +379,10 @@ function ZoqFotPikComm(targetCanvas) {
 			}
 		}
 
+		if (conversation != null) {
+			conversations.push(conversation);
+		}
+		
 		placeholderConversation();
 	};
 
@@ -338,16 +408,45 @@ function ZoqFotPikComm(targetCanvas) {
 		}
 	}
 
-	// Animation control
-	this.zoqTalking = function() {
-		setZfpFocus(FOCUS_ZOQ);
+	// Invalid size means we need to resize AND redraw everything
+	this.invalidateSize = function() {
+		if (sizeValid) {
+			sizeValid = false;
+			invalidate();
+		}
 	}
 
-	this.pikTalking = function() {
-		setZfpFocus(FOCUS_PIK);
+	this.startTalking = function(label) {
+		var firstLabel = label+"0";
+		var i;
+
+		currentConvLabel = null;
+		currentConvIndex = 0;
+		currentLineIndex = 0;
+
+		for (i = 0; i < conversations.length; i++) {
+			if (conversations[i].label == firstLabel) {
+				currentConvLabel = label;
+				currentConvIndex = i;
+				currentLineIndex = 0;
+				break;
+			}
+		}
+
+		if (currentConvLabel != null) {
+			setZfpFocus(FOCUS_ZOQ);
+			$("#zoqText").text(conversations[currentConvIndex].lines[currentLineIndex]);
+			$("#pikText").text("");
+		}
+
+		$("#conversationList").toggle();
 	}
 
-	this.noTalking = function() {
-		setZfpFocus(null);
+	this.keyDown = function(event) {
+		nextLine();
+	}
+
+	this.click = function(event) {
+		nextLine();
 	}
 }

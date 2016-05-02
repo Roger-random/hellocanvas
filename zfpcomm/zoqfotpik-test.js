@@ -6,18 +6,12 @@ function zfpActivate() {
 
 	zfpComm.start();
 	windowResize();
+	$(document).keydown(zfpComm.keyDown);
+	$(document).mousedown(zfpComm.click);
 }
 
-function zoqSpeak() {
-	zfpComm.zoqTalking();
-}
-
-function noSpeak() {
-	zfpComm.noTalking();
-}
-
-function pikSpeak() {
-	zfpComm.pikTalking();
+function say(label) {
+	zfpComm.startTalking(label);
 }
 
 function windowResize() {
