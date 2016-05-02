@@ -1,8 +1,9 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
     <head>
         <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>ZoqFotPik comm screen test</title>
-        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous" />
         <link href='https://fonts.googleapis.com/css?family=Teko:400' rel='stylesheet' type='text/css'/>
         <link rel="stylesheet" type="text/css" href="zoqfotpik-test.css"/>
         <script src="https://code.jquery.com/jquery-2.2.3.min.js" integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo=" crossorigin="anonymous"></script>
@@ -11,16 +12,16 @@
         <script src="zoqfotpik-test.js"></script>
     </head>
     <body onload="zfpActivate()">
-        <p>
-    	<div id="commParent">
-	        <p id="zoqText" class="zfpTalkingText"></p>
-	        <p id="pikText" class="zfpTalkingText"></p>
-	        <canvas id="commTarget">
-	            <h1>CANVAS tag is not supported on your browser. Check for browser support <a href="http://caniuse.com/#search=canvas">here</a>.</h1>
-	        </canvas>
-        </div>
-        </p>
-        <div id="conversationList">
+    	<div>
+	    	<div id="commParent">
+		        <p id="zoqText" class="zfpTalkingText"></p>
+		        <p id="pikText" class="zfpTalkingText"></p>
+		        <canvas id="commTarget">
+		            <h1>CANVAS tag is not supported on your browser. Check for browser support <a href="http://caniuse.com/#search=canvas">here</a>.</h1>
+		        </canvas>
+	        </div>
+	        <div id="conversationList">
+	        </div>
         </div>
     </body>
 </html>

@@ -2,7 +2,7 @@ body {
   -ms-user-select: none;
   -webkit-user-select: none;
   -moz-user-select: -moz-none;  
-  }
+}
 
  p {
 	font-family : Verdana, sans-serif;
@@ -10,11 +10,6 @@ body {
 
 #commParent {
 	position:relative;
-	width:90%;
-	margin-top:2.5%;
-	margin-bottom:2.5%;
-	margin-left:5%;
-	margin-right:5%;
 }
 
 .zfpTalkingText {
@@ -37,6 +32,5 @@ body {
 }
 
 #conversationList {
-	text-align: center;
-	font-size:3em;
+	font-size:2em;
 }
