@@ -332,8 +332,7 @@ function ZoqFotPikComm(targetCanvas) {
 		//       \ escape JS string literal meaning for \
 		//       \ escape special RegEx meaning for (
 		//       ) actual literal to use.
-		// \\s = whitespace character
-		var reLabel = new RegExp("^#\\((.+)\\)\\s","m");
+		var reLabel = new RegExp("^#\\((.+)\\)","m");
 
 		// Regular expression to extract sound file name
 		//	zoqfotpik-001.ogg from "#(WE_ARE0)	zoqfotpik-000.ogg"
